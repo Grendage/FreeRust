@@ -58,29 +58,41 @@ bool InjectDLL(const char* processName, const char* dllPath) {
 
     return true;
 }
-
+void setRegistryKey() {
+    HKEY hKey;
+    if (RegCreateKeyEx(HKEY_CURRENT_USER, "Software\\MyApp", 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hKey, NULL) == ERROR_SUCCESS) {
+        DWORD data = 1;
+        RegSetValueEx(hKey, "Accepted", 0, REG_DWORD, (BYTE*)&data, sizeof(data));
+        RegCloseKey(hKey);
+    }
+}
+bool isRegistryKeySet() {
+    HKEY hKey;
+    if (RegOpenKeyEx(HKEY_CURRENT_USER, "Software\\MyApp", 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+        DWORD dataType, dataSize;
+        if (RegQueryValueEx(hKey, "Accepted", NULL, &dataType, NULL, &dataSize) == ERROR_SUCCESS && dataType == REG_DWORD) {
+            DWORD data;
+            RegQueryValueEx(hKey, "Accepted", NULL, NULL, (LPBYTE)&data, &dataSize);
+            return data == 1;
+        }
+        RegCloseKey(hKey);
+    }
+    return false;
+}
 int main() {
     HWND hWnd = GetConsoleWindow();
     ShowWindow(hWnd, SW_HIDE);
 
     setlocale(NULL, "RUS");
 
-    std::ifstream acceptedFile("accepted.txt");
-    if (acceptedFile.good()) {
-        acceptedFile.close();
-    }
-    else {
-        acceptedFile.close();
-        MessageBox(NULL, "Продолжение использования нашего античита подразумевает ваше согласие с условиями настоящей политики конфиденциальности и обработкой ваших данных в соответствии с указанными принципами(https://vk.cc/cv0Nba).", "Соглашение", MB_OK);
-        std::ofstream outFile("accepted.txt");
-        if (outFile.is_open()) {
-            outFile << "1";
-            outFile.close();
-        }
-    }
-
     char currentPath[MAX_PATH];
     GetCurrentDirectoryA(MAX_PATH, currentPath);
+
+    if (!isRegistryKeySet()) {
+        MessageBox(NULL, "РџСЂРѕРґРѕР»Р¶РµРЅРёРµ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЏ РЅР°С€РµРіРѕ Р°РЅС‚РёС‡РёС‚Р° РїРѕРґСЂР°Р·СѓРјРµРІР°РµС‚ РІР°С€Рµ СЃРѕРіР»Р°СЃРёРµ СЃ СѓСЃР»РѕРІРёСЏРјРё РЅР°СЃС‚РѕСЏС‰РµР№ РїРѕР»РёС‚РёРєРё РєРѕРЅС„РёРґРµРЅС†РёР°Р»СЊРЅРѕСЃС‚Рё Рё РѕР±СЂР°Р±РѕС‚РєРѕР№ РІР°С€РёС… РґР°РЅРЅС‹С… РІ СЃРѕРѕС‚РІРµС‚СЃС‚РІРёРё СЃ СѓРєР°Р·Р°РЅРЅС‹РјРё РїСЂРёРЅС†РёРїР°РјРё(https://vk.cc/cv0Nba).", "РЎРѕРіР»Р°С€РµРЅРёРµ", MB_OK);
+        setRegistryKey();
+    }
+
     std::string rustClientPath = currentPath;
     rustClientPath += "\\RustClient.exe";
 
